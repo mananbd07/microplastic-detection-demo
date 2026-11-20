@@ -1,0 +1,6 @@
+tensorflow==2.15.0
+pennylane
+opencv-python-headless
+numpy==1.26.4
+Pillow
+gradio
