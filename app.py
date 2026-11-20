@@ -4,7 +4,7 @@ import glob
 import cv2
 import numpy as np
 import tensorflow as tf
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import gradio as gr
 
 # Import your custom logic
@@ -65,13 +65,13 @@ def process_image(image, confidence_threshold=0.90):
         if crop.size == 0:
             continue
             
-        # AI RECOMMENDATION: Fix training/inference mismatch by applying enhancement to the crop
+        # Apply enhancement to the crop to match training
         crop_gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
         crop_denoised = cv2.fastNlMeansDenoising(crop_gray, None, 10, 7, 21)
         crop_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)).apply(crop_denoised)
         crop_enhanced = cv2.cvtColor(crop_clahe, cv2.COLOR_GRAY2BGR)
         
-        # Resize and normalize to tf.float64 (as used in training)
+        # Resize and normalize to tf.float64
         resized = cv2.resize(crop_enhanced, (IMG_SHAPE[1], IMG_SHAPE[0]))
         img_tensor = tf.convert_to_tensor(resized, dtype=tf.float64)
         img_batch = tf.expand_dims(img_tensor, axis=0)
@@ -96,6 +96,9 @@ def process_image(image, confidence_threshold=0.90):
 # 3. Build the Gradio UI
 example_images = glob.glob("examples/*.jpg") + glob.glob("examples/*.png")
 
+# FIX: Gradio requires a nested list of inputs if there are multiple inputs (Image + Slider)
+formatted_examples = [[img, 0.90] for img in example_images]
+
 interface = gr.Interface(
     fn=process_image,
     inputs=[
@@ -108,9 +111,9 @@ interface = gr.Interface(
     ],
     title="🔬 Microplastic Detection System (Hybrid Quantum-Classical)",
     description="Upload an image of a water sample. The model uses an EfficientNetV2B0 feature extractor and a PennyLane 4-qubit quantum circuit to detect microplastics.",
-    examples=example_images,
-    theme="soft"
+    examples=formatted_examples
 )
 
 if __name__ == "__main__":
-    interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
+    # FIX: Gradio 6.0+ requires the theme in the launch() method
+    interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)), theme="soft")
